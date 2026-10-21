@@ -1,0 +1,24 @@
+#
+# logrotate config for Docker service.
+# Logs directory is bind-mounted into the logrotate container as /logs
+#
+
+/logs/*/*.log {
+  # Bind-mounted log dirs are world-writable, and logrotate skips them without this.
+  su root root
+  missingok
+  notifempty
+
+  size 20M
+  rotate 12
+
+  compress
+  delaycompress
+
+  dateext
+  dateformat -%Y%m%d-%H%M
+
+  # Use copytruncate for all logs to avoid needing to signal/reopen files inside containers.
+  # Works well for nginx and is acceptable for Python log files too.
+  copytruncate
+}

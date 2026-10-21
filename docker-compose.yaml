@@ -1,0 +1,52 @@
+x-app-config: &app
+  networks:
+    - local
+  volumes:
+    - ./app:/code/app
+    - ./screenshots:/code/screenshots
+    - ./logs:/code/logs
+    - ./proxies.txt:/code/proxies.txt
+    - ./target_links.txt:/code/target_links.txt
+  env_file:
+    - ./.env
+
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cloak-bot
+    # restart: unless-stopped # no need for one-time test operation
+    # tini as PID 1, otherwise xvfb-run waits forever for SIGUSR1 and the app never starts
+    init: true
+    mem_limit: 512m
+    # Headed Chromium (HEADLESS=False) needs a display; Xvfb provides one inside the container
+    command: xvfb-run -a --server-args="-screen 0 1920x1080x24" uv run -m app.main
+    <<: *app
+
+  logrotate:
+    image: alpine:3.20
+    container_name: cloak-logrotate
+    restart: unless-stopped
+    mem_limit: 32m
+    environment:
+      - LOGROTATE_SLEEP_SECONDS=900
+    volumes:
+      - ./logs:/logs
+      # NOTE: logrotate requires the config to be owned by root and not group-writable.
+      # So we mount it in /config (owner may not be root), and copy it inside the container at startup.
+      - ./ops/logrotate/cloak-backend:/config/cloak-backend:ro
+      - ./scripts/run-logrotate.sh:/scripts/run-logrotate.sh:ro
+      - logrotate-state:/var/lib/logrotate
+    entrypoint: /bin/sh
+    # Run every 30 minutes. Also try to ensure required dirs exist and are writable by uid=999.
+    command: -lc "sh /scripts/run-logrotate.sh cloak-backend"
+    networks:
+      - local
+
+networks:
+  local:
+    driver: bridge
+
+volumes:
+  logrotate-state:
