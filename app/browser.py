@@ -17,11 +17,17 @@ def init_browser(proxy: str):
 
 def take_link_screenshot(browser: Browser, link: str):
     page = browser.new_page()
-    page.goto(link)
 
-    # wait for page to load, just for sure;
-    # of course in real project better wait for some tag is loaded, like map container, etc
-    page.wait_for_timeout(120_000)
+    # The listener must be armed before goto: the sections request can finish
+    # while goto is still waiting for "load", and would be missed otherwise.
+    with page.expect_response(
+        lambda response: "/sections?" in response.url and response.ok,
+        timeout=120_000,
+    ):
+        page.goto(link)
+
+    # wait some time to response is processed and seats are rendered    
+    page.wait_for_timeout(3_000)
 
     screenshot = page.screenshot(type="png")
     page.close()

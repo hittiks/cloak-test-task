@@ -1,5 +1,4 @@
 import logging
-import random
 from pathlib import Path
 
 from app.browser import close_browser, init_browser, take_link_screenshot
@@ -24,14 +23,26 @@ def screenshot_path(link: str) -> Path:
 
 def main():
     valid_proxies = get_valid_proxies()
-    random_proxy = random.choice(valid_proxies)
-    browser = init_browser(random_proxy)
+
     for link in settings.TARGET_LINKS:
-        screenshot = take_link_screenshot(browser, link)
-        path = screenshot_path(link)
-        path.write_bytes(screenshot)
-        logger.info(f"Screenshot taken for {link}: {path} ({len(screenshot)} bytes)")
-    close_browser(browser)
+        for proxy in valid_proxies:
+            try:
+                browser = init_browser(proxy)
+                screenshot = take_link_screenshot(browser, link)
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Screenshot failed for {link} because of exception: {e}; so retrying with new proxy")
+                continue
+            finally:
+                close_browser(browser)
+            
+            if not screenshot:
+                logger.info(f"Screenshot failed for {link} because of no screenshot; so retrying with new proxy")
+                continue
+
+            path = screenshot_path(link)
+            path.write_bytes(screenshot)
+            logger.info(f"Screenshot taken for {link}: {path} ({len(screenshot)} bytes)")
+            break
 
 
 if __name__ == "__main__":
