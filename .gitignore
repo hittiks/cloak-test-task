@@ -23,3 +23,6 @@ proxies.txt
 
 # Logs
 logs/
+
+# Debug files
+page_content.html

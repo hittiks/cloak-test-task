@@ -1,4 +1,5 @@
 import logging
+import random
 
 import httpx
 
@@ -38,4 +39,5 @@ def get_valid_proxies():
 
         logger.info(f"Proxy {proxy} added to valid proxies")
 
+    random.shuffle(valid_proxies)
     return valid_proxies

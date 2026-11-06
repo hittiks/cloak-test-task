@@ -19,7 +19,6 @@ services:
     # restart: unless-stopped # no need for one-time test operation
     # tini as PID 1, otherwise xvfb-run waits forever for SIGUSR1 and the app never starts
     init: true
-    mem_limit: 512m
     # Headed Chromium (HEADLESS=False) needs a display; Xvfb provides one inside the container
     command: xvfb-run -a --server-args="-screen 0 1920x1080x24" uv run -m app.main
     <<: *app
